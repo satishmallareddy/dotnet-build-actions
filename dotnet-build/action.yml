@@ -1,25 +1,45 @@
-name: "Build dotnet project"
-description: "Build dotnet project..."
+name: "Build .NET project"
+description: "Build .NET project..."
 inputs:
+  setup_dotnet:
+    description: 'Setup .NET?'
+    type: boolean
+    required: false
+    default: false
   dotnet-version:
-    description: 'The dotnet version to use'
-    default: '2.1.x'
+    description: 'The .NET version to use'
+    default: '6.0.x'
     required: false
   project-path:
     description: 'The path to the project'
     required: true
-    
+  run_unittests:
+    description: 'Run unit tests?'
+    type: boolean
+    required: true
+    default: true
+  unittests_project-path:
+    description: 'The path to the unit test project'
+    required: true
 
 runs:
   using: "composite"
   steps: 
-    - name: Setup dotnet
-      uses: actions/setup-dotnet@v1
+    - name: Setup .NET
+      if: github.event.inputs.setup_dotnet == true
+      id: setup_dotnet_step
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
         
-    - run: dotnet restore ${{ inputs.project-path }}
+    - name: Restore dependencies
+      run: dotnet restore ${{ inputs.project-path }}
       shell: bash
-
-    - run: dotnet build ${{ inputs.project-path }} 
+      
+    - name: Build
+      run: dotnet build ${{ inputs.project-path }} --no-restore
       shell: bash
+      
+    - name: Test
+      if: github.event.inputs.run_unittests == true
+      run: dotnet test ${{ inputs.unittests_project-path }} --no-build --verbosity normal
